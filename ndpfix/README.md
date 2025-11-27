@@ -14,10 +14,13 @@
 - 以 `root` 运行，确保系统有 `ip` 与 `sysctl`。
 
 ## 使用
-- 单次修复指定 IP：
-  - `ndpfix oneshot --wan eth1 --lan br-lan --ip 240e:xxxx:xxxx:xxxx::abcd`
-- 扫描 LAN 邻居并批量修复：
-  - `ndpfix scan --wan eth1 --lan br-lan`
+- 带参数模式（支持短/长参数）：
+  - 单次修复：`ndpfix oneshot --wan eth1 --lan br-lan --ip 240e:xxxx:xxxx:xxxx::abcd`
+  - 扫描批量：`ndpfix scan --wan eth1 --lan br-lan`
+- 位置参数模式（在某些系统上更稳）：
+  - 单次修复：`ndpfix oneshot eth1 br-lan 240e:xxxx:xxxx:xxxx::abcd`
+  - 扫描批量：`ndpfix scan eth1 br-lan`
+  - 可加详细输出：在带参数模式使用 `--verbose`
 
 ## 持久化
 - 可在 OpenWrt 中将命令加入 `/etc/rc.local` 或热插拔脚本，定时调用 `scan`。
