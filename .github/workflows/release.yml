@@ -42,12 +42,21 @@ jobs:
         run: cargo install cross --git https://github.com/cross-rs/cross
 
       - name: Build
+        env:
+          RUSTFLAGS: -C strip=symbols
         run: cross build --release --target ${{ matrix.target }}
+
+      - name: Install upx
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y upx
 
       - name: Package
         run: |
           mkdir -p ../dist
           cp target/${{ matrix.target }}/release/ndpfix ../dist/ndpfix-${{ matrix.target }}
+          strip ../dist/ndpfix-${{ matrix.target }} || true
+          upx --best --lzma ../dist/ndpfix-${{ matrix.target }} || true
           cd ../dist
           tar -czf ndpfix-${{ matrix.target }}.tar.gz ndpfix-${{ matrix.target }}
 
