@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand, Args};
 use clap::error::ErrorKind;
 use regex::Regex;
 use std::process::Command;
+use std::path::Path;
 
 #[derive(Parser)]
 #[command(name = "ndpfix")]
@@ -33,23 +34,38 @@ fn run(cmd: &mut Command) -> Result<String> {
     if out.status.success() { 
         Ok(String::from_utf8_lossy(&out.stdout).to_string())
     } else {
-        Err(anyhow!(String::from_utf8_lossy(&out.stderr).to_string()))
+        let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+        eprintln!("{stderr}");
+        Err(anyhow!(stderr))
     }
 }
 
+fn cmd_path(candidates: &[&'static str]) -> Option<&'static str> {
+    for p in candidates { if Path::new(p).exists() { return Some(*p) } }
+    None
+}
+
+fn sysctl_cmd() -> &'static str {
+    cmd_path(&["/sbin/sysctl", "/usr/sbin/sysctl", "sysctl"]).unwrap_or("sysctl")
+}
+
+fn ip_cmd() -> &'static str {
+    cmd_path(&["/sbin/ip", "/usr/sbin/ip", "/bin/ip", "ip"]).unwrap_or("ip")
+}
+
 fn enable_proxy_ndp(wan: &str) -> Result<()> {
-    run(Command::new("sysctl").args(["-w", "net.ipv6.conf.all.proxy_ndp=1"]))?;
-    run(Command::new("sysctl").args(["-w", &format!("net.ipv6.conf.{wan}.proxy_ndp=1")]))?;
+    run(Command::new(sysctl_cmd()).args(["-w", "net.ipv6.conf.all.proxy_ndp=1"]))?;
+    run(Command::new(sysctl_cmd()).args(["-w", &format!("net.ipv6.conf.{wan}.proxy_ndp=1")]))?;
     Ok(())
 }
 
 fn add_host_route(ip: &str, lan: &str) -> Result<()> {
-    run(Command::new("ip").args(["-6", "route", "replace", &format!("{ip}/128"), "dev", lan]))?;
+    run(Command::new(ip_cmd()).args(["-6", "route", "replace", &format!("{ip}/128"), "dev", lan]))?;
     Ok(())
 }
 
 fn add_ndp_proxy(ip: &str, wan: &str) -> Result<()> {
-    run(Command::new("ip").args(["-6", "neigh", "replace", "proxy", ip, "dev", wan]))?;
+    run(Command::new(ip_cmd()).args(["-6", "neigh", "replace", "proxy", ip, "dev", wan]))?;
     Ok(())
 }
 
@@ -58,7 +74,7 @@ fn is_global_ipv6(ip: &str) -> bool {
 }
 
 fn scan_neighbors(lan: &str) -> Result<Vec<String>> {
-    let out = run(Command::new("ip").args(["-6", "neigh", "show", "dev", lan]))?;
+    let out = run(Command::new(ip_cmd()).args(["-6", "neigh", "show", "dev", lan]))?;
     let re = Regex::new(r"([0-9a-fA-F:]+)\s+dev\s+\S+").unwrap();
     let mut ips = Vec::new();
     for line in out.lines() {
