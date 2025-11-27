@@ -1,10 +1,18 @@
 name: Release ndpfix
 
+permissions:
+  contents: write
+
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*.*.*"
       - "v*"
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -14,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [aarch64-unknown-linux-musl, armv7-unknown-linux-musleabihf]
+        target: [aarch64-unknown-linux-musl, armv7-unknown-linux-musleabihf, x86_64-unknown-linux-musl]
     defaults:
       run:
         working-directory: ndpfix
@@ -72,6 +80,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: upload/*
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
